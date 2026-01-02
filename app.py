@@ -249,7 +249,11 @@ elif menu == "📚 Diplomados":
     with tab3:
         st.subheader("Registrar Nuevo Diplomado")
         
-        with st.form("nuevo_diplomado", clear_on_submit=True):
+        # Inicializar contador de formulario en session state
+        if 'form_diplomado_key' not in st.session_state:
+            st.session_state.form_diplomado_key = 0
+        
+        with st.form(f"nuevo_diplomado_{st.session_state.form_diplomado_key}"):
             nombre = st.text_input("Nombre del Diplomado *")
             clave = st.text_input("Clave (ej: TCC-8VA-P) *")
             modalidad = st.selectbox("Modalidad *", ["Presencial", "Virtual", "Híbrida"])
@@ -272,6 +276,8 @@ elif menu == "📚 Diplomados":
                                        fecha_inicio.strftime('%Y-%m-%d'),
                                        fecha_fin.strftime('%Y-%m-%d'), mensualidades):
                         st.success("✅ Diplomado registrado exitosamente")
+                        # Incrementar contador para limpiar el formulario
+                        st.session_state.form_diplomado_key += 1
                         st.rerun()
                     else:
                         st.error("Error al registrar diplomado")
@@ -421,7 +427,11 @@ elif menu == "👥 Alumnos":
     with tab2:
         st.subheader("Registrar Nuevo Alumno")
         
-        with st.form("nuevo_alumno", clear_on_submit=True):
+        # Inicializar contador de formulario en session state
+        if 'form_alumno_key' not in st.session_state:
+            st.session_state.form_alumno_key = 0
+        
+        with st.form(f"nuevo_alumno_{st.session_state.form_alumno_key}"):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -430,7 +440,7 @@ elif menu == "👥 Alumnos":
                 
                 diplomados = db.get_all_diplomados()
                 if diplomados:
-                    opciones = [f"{d[2]}" for d in diplomados]
+                    opciones = ["-"] + [f"{d[2]}" for d in diplomados]
                     diplomado_activo = st.selectbox("Diplomado Activo *", opciones)
                 else:
                     st.warning("⚠️ Primero debes registrar diplomados")
@@ -447,11 +457,12 @@ elif menu == "👥 Alumnos":
                 mensualidad = st.number_input("Mensualidad *", min_value=0.0, step=100.0)
                 
                 # Calcular y mostrar total diplomado
-                if diplomados and diplomado_activo:
-                    dip_seleccionado = next(d for d in diplomados if d[2] == diplomado_activo)
-                    num_mensualidades = dip_seleccionado[6]
-                    total_calculado = pago_inscripcion + (mensualidad * num_mensualidades)
-                    st.info(f"**Total Diplomado:** ${total_calculado:,.2f}")
+                if diplomados and diplomado_activo and diplomado_activo != "-":
+                    dip_seleccionado = next((d for d in diplomados if d[2] == diplomado_activo), None)
+                    if dip_seleccionado:
+                        num_mensualidades = dip_seleccionado[6]
+                        total_calculado = pago_inscripcion + (mensualidad * num_mensualidades)
+                        st.info(f"**Total Diplomado:** ${total_calculado:,.2f}")
             
             submitted = st.form_submit_button("➕ Registrar Alumno")
             
@@ -459,6 +470,8 @@ elif menu == "👥 Alumnos":
                 # Validaciones
                 if not all([nombre_completo, curp, telefono, correo, diplomado_activo]):
                     st.error("Por favor completa todos los campos obligatorios")
+                elif diplomado_activo == "-":
+                    st.error("Debes seleccionar un diplomado válido")
                 elif matricula and len(matricula) != 10:
                     st.error("La matrícula debe tener exactamente 10 dígitos (o dejarla vacía)")
                 elif len(curp) != 18:
@@ -483,6 +496,8 @@ elif menu == "👥 Alumnos":
                         st.success("✅ Alumno registrado exitosamente")
                         # Actualizar contador de alumnos en diplomado
                         db.update_alumnos_inscritos(dip_seleccionado[0])
+                        # Incrementar contador para limpiar el formulario
+                        st.session_state.form_alumno_key += 1
                         st.rerun()
                     else:
                         st.error("Error al registrar alumno")
@@ -604,7 +619,11 @@ elif menu == "💸 Gastos":
     with tab1:
         st.subheader("Registrar Nuevo Gasto")
         
-        with st.form("nuevo_gasto", clear_on_submit=True):
+        # Inicializar contador de formulario en session state
+        if 'form_gasto_key' not in st.session_state:
+            st.session_state.form_gasto_key = 0
+        
+        with st.form(f"nuevo_gasto_{st.session_state.form_gasto_key}"):
             fecha = st.date_input("Fecha del Gasto *")
             concepto = st.text_input("Concepto *", placeholder="Ej: Papelería, Renta, Servicios...")
             monto = st.number_input("Monto *", min_value=0.0, step=10.0)
@@ -619,6 +638,8 @@ elif menu == "💸 Gastos":
                 else:
                     if db.add_gasto(fecha.strftime('%Y-%m-%d'), concepto, monto):
                         st.success("✅ Gasto registrado exitosamente")
+                        # Incrementar contador para limpiar el formulario
+                        st.session_state.form_gasto_key += 1
                         st.rerun()
                     else:
                         st.error("Error al registrar gasto")
