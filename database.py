@@ -1,51 +1,34 @@
 import mysql.connector
-import sqlite3
 from datetime import datetime
 from typing import List, Tuple, Optional
-from config import USE_MYSQL, MYSQL_CONFIG, SQLITE_DB
+from config import MYSQL_CONFIG
 
 class DatabaseManager:
     def __init__(self):
-        self.use_mysql = USE_MYSQL
-        if self.use_mysql:
-            self.config = MYSQL_CONFIG
-        else:
-            self.db_name = SQLITE_DB
+        self.config = MYSQL_CONFIG
         self.init_database()
     
     def get_connection(self):
-        """Crear conexión a la base de datos"""
-        if self.use_mysql:
-            return mysql.connector.connect(**self.config)
-        else:
-            return sqlite3.connect(self.db_name)
+        """Crear conexión a la base de datos MySQL"""
+        return mysql.connector.connect(**self.config)
     
     def get_placeholder(self):
-        """Retorna el placeholder correcto según el tipo de DB"""
-        return '%s' if self.use_mysql else '?'
+        """Retorna el placeholder para MySQL"""
+        return '%s'
     
     def init_database(self):
-        """Inicializar todas las tablas de la base de datos"""
+        """Inicializar todas las tablas de la base de datos MySQL"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Definir tipos según la BD
-        if self.use_mysql:
-            pk = "INT AUTO_INCREMENT PRIMARY KEY"
-            integer = "INT"
-            real = "DECIMAL(10,2)"
-            text = "TEXT"
-            varchar_50 = "VARCHAR(50)"
-            varchar_255 = "VARCHAR(255)"
-            date_type = "DATE"
-        else:
-            pk = "INTEGER PRIMARY KEY AUTOINCREMENT"
-            integer = "INTEGER"
-            real = "REAL"
-            text = "TEXT"
-            varchar_50 = "TEXT"
-            varchar_255 = "TEXT"
-            date_type = "TEXT"
+        # Tipos de datos MySQL
+        pk = "INT AUTO_INCREMENT PRIMARY KEY"
+        integer = "INT"
+        real = "DECIMAL(10,2)"
+        text = "TEXT"
+        varchar_50 = "VARCHAR(50)"
+        varchar_255 = "VARCHAR(255)"
+        date_type = "DATE"
         
         # Tabla de Diplomados
         cursor.execute(f'''
@@ -64,10 +47,7 @@ class DatabaseManager:
         
         # Agregar columna status si no existe (para bases de datos existentes)
         try:
-            if self.use_mysql:
-                cursor.execute(f"ALTER TABLE diplomados ADD COLUMN status VARCHAR(20) DEFAULT 'Activo'")
-            else:
-                cursor.execute(f"ALTER TABLE diplomados ADD COLUMN status TEXT DEFAULT 'Activo'")
+            cursor.execute("ALTER TABLE diplomados ADD COLUMN status VARCHAR(20) DEFAULT 'Activo'")
             conn.commit()
         except:
             pass  # La columna ya existe
@@ -180,15 +160,15 @@ class DatabaseManager:
         return diplomados
     
     def update_diplomado(self, id: int, nombre: str, clave: str, modalidad: str,
-                        ph = self.get_placeholder()
                         fecha_inicio: str, fecha_fin: str, num_mensualidades: int) -> bool:
         """Actualizar un diplomado"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
+            ph = self.get_placeholder()
             cursor.execute(f'''
                 UPDATE diplomados 
-                SET nombre=?, clave=?, modalidad=?, fecha_inicio=?, fecha_fin=?, num_mensualidades=?
+                SET nombre={ph}, clave={ph}, modalidad={ph}, fecha_inicio={ph}, fecha_fin={ph}, num_mensualidades={ph}
                 WHERE id = {ph}
             ''', (nombre, clave, modalidad, fecha_inicio, fecha_fin, num_mensualidades, id))
             conn.commit()
@@ -201,12 +181,13 @@ class DatabaseManager:
     
     def delete_diplomado(self, id: int) -> bool:
         """Eliminar un diplomado (solo si no tiene alumnos)"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
             # Verificar si tiene alumnos
-            cursor.execute('SELECT COUNT(*) FROM alumnos WHERE diplomado_id = {ph}', (id,))
+            cursor.execute(f'SELECT COUNT(*) FROM alumnos WHERE diplomado_id = {ph}', (id,))
             count = cursor.fetchone()[0]
             
             if count > 0:
@@ -214,7 +195,7 @@ class DatabaseManager:
                 conn.close()
                 return False
             
-            cursor.execute('DELETE FROM diplomados WHERE id = {ph}', (id,))
+            cursor.execute(f'DELETE FROM diplomados WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -229,7 +210,7 @@ class DatabaseManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute("UPDATE diplomados SET status='Archivado' WHERE id = {ph}", (id,))
+            cursor.execute(f"UPDATE diplomados SET status='Archivado' WHERE id = {ph}", (id,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -259,7 +240,7 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         if status:
-            cursor.execute('SELECT * FROM diplomados WHERE status = {ph} ORDER BY fecha_inicio DESC', (status,))
+            cursor.execute(f'SELECT * FROM diplomados WHERE status = {ph} ORDER BY fecha_inicio DESC', (status,))
         else:
             cursor.execute('SELECT * FROM diplomados ORDER BY fecha_inicio DESC')
         
@@ -270,6 +251,7 @@ class DatabaseManager:
     
     def update_alumnos_inscritos(self, diplomado_id: int):
         """Actualizar el contador de alumnos inscritos en un diplomado"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(f'''
@@ -298,7 +280,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             # Obtener el ID del diplomado por su clave
-            cursor.execute('SELECT id FROM diplomados WHERE clave = {ph}', (diplomado_clave,))
+            cursor.execute(f'SELECT id FROM diplomados WHERE clave = {ph}', (diplomado_clave,))
             diplomado_id = cursor.fetchone()
             
             if not diplomado_id:
@@ -322,27 +304,27 @@ class DatabaseManager:
             return False
     
     def get_alumnos_filtrados(self, nombre: str = None, matricula: str = None, 
-                             ph = self.get_placeholder()
                              diplomado: str = None) -> List[Tuple]:
         """Obtener alumnos con filtros opcionales"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        ph = self.get_placeholder()
         
         query = 'SELECT * FROM alumnos WHERE 1=1'
         params = []
         
         if nombre:
-            query += ' AND nombre_completo LIKE ?'
+            query += f' AND nombre_completo LIKE {ph}'
             params.append(f'%{nombre}%')
         
         if matricula:
-            query += ' AND matricula LIKE ?'
+            query += f' AND matricula LIKE {ph}'
             params.append(f'%{matricula}%')
         
         if diplomado and diplomado != "Todos":
             # Extraer la clave entre paréntesis
             clave = diplomado.split('(')[1].strip(')')
-            query += ' AND diplomado_clave = {ph}'
+            query += f' AND diplomado_clave = {ph}'
             params.append(clave)
         
         query += ' ORDER BY nombre_completo'
@@ -355,9 +337,10 @@ class DatabaseManager:
     
     def get_alumno_por_matricula(self, matricula: str) -> Optional[Tuple]:
         """Obtener un alumno por su matrícula"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM alumnos WHERE matricula = {ph}', (matricula,))
+        cursor.execute(f'SELECT * FROM alumnos WHERE matricula = {ph}', (matricula,))
         alumno = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -375,7 +358,7 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             # Obtener el ID del diplomado
-            cursor.execute('SELECT id FROM diplomados WHERE clave = {ph}', (diplomado_clave,))
+            cursor.execute(f'SELECT id FROM diplomados WHERE clave = {ph}', (diplomado_clave,))
             diplomado_id = cursor.fetchone()
             
             if not diplomado_id:
@@ -425,10 +408,10 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             # Primero eliminar sus pagos
-            cursor.execute('DELETE FROM pagos WHERE alumno_id = {ph}', (id,))
+            cursor.execute(f'DELETE FROM pagos WHERE alumno_id = {ph}', (id,))
             
             # Luego eliminar el alumno
-            cursor.execute('DELETE FROM alumnos WHERE id = {ph}', (id,))
+            cursor.execute(f'DELETE FROM alumnos WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -439,6 +422,7 @@ class DatabaseManager:
     
     def get_alumnos_por_diplomado_clave(self, clave: str) -> List[Tuple]:
         """Obtener todos los alumnos de un diplomado específico"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(f'''
@@ -602,10 +586,11 @@ class DatabaseManager:
     
     def delete_gasto(self, id: int) -> bool:
         """Eliminar un gasto"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM gastos WHERE id = {ph}', (id,))
+            cursor.execute(f'DELETE FROM gastos WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
             conn.close()
@@ -670,6 +655,7 @@ class DatabaseManager:
     
     def get_gastos_mes_actual(self) -> float:
         """Obtener gastos del mes actual"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -705,7 +691,7 @@ class DatabaseManager:
     def get_ingresos_gastos_6_meses(self) -> List[Tuple]:
         """Obtener ingresos y gastos de los últimos 6 meses"""
         from datetime import timedelta
-        
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -838,15 +824,15 @@ class DatabaseManager:
         return self.get_eventos_calendario(primer_dia, ultimo_dia)
     
     def update_evento_calendario(self, id: int, fecha: str, diplomado_clave: str, 
-                                 ph = self.get_placeholder()
                                  tipo: str, modulo: int) -> bool:
         """Actualizar un evento del calendario"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
+            ph = self.get_placeholder()
             cursor.execute(f'''
                 UPDATE calendario 
-                SET fecha=?, diplomado_clave=?, tipo=?, modulo=?
+                SET fecha={ph}, diplomado_clave={ph}, tipo={ph}, modulo={ph}
                 WHERE id = {ph}
             ''', (fecha, diplomado_clave, tipo, modulo, id))
             conn.commit()
@@ -859,10 +845,11 @@ class DatabaseManager:
     
     def delete_evento_calendario(self, id: int) -> bool:
         """Eliminar un evento del calendario"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM calendario WHERE id = {ph}', (id,))
+            cursor.execute(f'DELETE FROM calendario WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
             conn.close()
