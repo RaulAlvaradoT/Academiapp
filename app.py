@@ -249,7 +249,7 @@ elif menu == "📚 Diplomados":
     with tab3:
         st.subheader("Registrar Nuevo Diplomado")
         
-        with st.form("nuevo_diplomado"):
+        with st.form("nuevo_diplomado", clear_on_submit=True):
             nombre = st.text_input("Nombre del Diplomado *")
             clave = st.text_input("Clave (ej: TCC-8VA-P) *")
             modalidad = st.selectbox("Modalidad *", ["Presencial", "Virtual", "Híbrida"])
@@ -421,7 +421,7 @@ elif menu == "👥 Alumnos":
     with tab2:
         st.subheader("Registrar Nuevo Alumno")
         
-        with st.form("nuevo_alumno"):
+        with st.form("nuevo_alumno", clear_on_submit=True):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -604,7 +604,7 @@ elif menu == "💸 Gastos":
     with tab1:
         st.subheader("Registrar Nuevo Gasto")
         
-        with st.form("nuevo_gasto"):
+        with st.form("nuevo_gasto", clear_on_submit=True):
             fecha = st.date_input("Fecha del Gasto *")
             concepto = st.text_input("Concepto *", placeholder="Ej: Papelería, Renta, Servicios...")
             monto = st.number_input("Monto *", min_value=0.0, step=10.0)
