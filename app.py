@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from database import DatabaseManager
 import plotly.express as px
@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 
 # Configuración de la página
 st.set_page_config(
-    page_title="AcademiApp - Gestión Academia",
+    page_title="AcademiApp",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -25,8 +25,7 @@ if 'authenticated' not in st.session_state:
 
 # Verificar autenticación
 if not st.session_state.authenticated:
-    st.markdown('<p style="font-size: 2.5rem; font-weight: bold; color: #1f77b4; text-align: center;">🎓 AcademiApp</p>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #666;">Sistema de Gestión Académica</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 2.5rem; font-weight: bold; color: #1f77b4; text-align: center;">AcademiApp</p>', unsafe_allow_html=True)
     st.markdown("---")
     
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -74,7 +73,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Sidebar - Navegación
-st.sidebar.title("🎓 AcademiApp")
+st.sidebar.title("AcademiApp")
 st.sidebar.markdown("---")
 
 menu = st.sidebar.radio(
@@ -134,7 +133,7 @@ if menu == "🏠 Dashboard":
             st.info("No hay datos de alumnos por diplomado")
     
     with col2:
-        st.subheader("💵 Ingresos vs Gastos (Últimos 6 meses)")
+        st.subheader("💵 Ingresos vs Gastos (6 meses)")
         ingresos_gastos = db.get_ingresos_gastos_6_meses()
         if ingresos_gastos:
             df = pd.DataFrame(ingresos_gastos, columns=['Mes', 'Ingresos', 'Gastos'])
@@ -146,18 +145,7 @@ if menu == "🏠 Dashboard":
         else:
             st.info("No hay datos de ingresos y gastos")
     
-    st.markdown("---")
-    
-    # Tabla de alumnos con adeudos
-    st.subheader("⚠️ Alumnos con Adeudos")
-    alumnos_adeudos = db.get_alumnos_con_adeudos()
-    if alumnos_adeudos:
-        df = pd.DataFrame(alumnos_adeudos, 
-                         columns=['Matrícula', 'Nombre', 'Diplomado', 'Mensualidades Pagadas', 
-                                'Total Mensualidades', 'Adeudo'])
-        st.dataframe(df, use_container_width=True)
-    else:
-        st.success("✅ No hay alumnos con adeudos")
+
 
 # ============================================================================
 # 📚 GESTIÓN DE DIPLOMADOS
@@ -165,13 +153,13 @@ if menu == "🏠 Dashboard":
 elif menu == "📚 Diplomados":
     st.markdown('<p class="main-header">Gestión de Diplomados</p>', unsafe_allow_html=True)
     
-    tab1, tab2 = st.tabs(["📋 Lista de Diplomados", "➕ Agregar Diplomado"])
+    tab1, tab2, tab3 = st.tabs(["📋 Diplomados Activos", "📦 Diplomados Archivados", "➕ Agregar Diplomado"])
     
     with tab1:
-        diplomados = db.get_all_diplomados()
+        diplomados = db.get_diplomados_filtrados('Activo')
         
         if diplomados:
-            st.subheader("Diplomados Registrados")
+            st.subheader("Diplomados Activos")
             
             for dip in diplomados:
                 with st.expander(f"📚 {dip[1]} - {dip[2]}"):
@@ -187,6 +175,12 @@ elif menu == "📚 Diplomados":
                     with col2:
                         if st.button("✏️ Editar", key=f"edit_dip_{dip[0]}"):
                             st.session_state.editing_diplomado = dip[0]
+                        if st.button("📦 Archivar", key=f"arch_dip_{dip[0]}"):
+                            if db.archivar_diplomado(dip[0]):
+                                st.success("Diplomado archivado")
+                                st.rerun()
+                            else:
+                                st.error("Error al archivar")
                         if st.button("🗑️ Eliminar", key=f"del_dip_{dip[0]}"):
                             if db.delete_diplomado(dip[0]):
                                 st.success("Diplomado eliminado")
@@ -223,9 +217,36 @@ elif menu == "📚 Diplomados":
                                     del st.session_state.editing_diplomado
                                     st.rerun()
         else:
-            st.info("No hay diplomados registrados")
+            st.info("No hay diplomados activos")
     
     with tab2:
+        diplomados_archivados = db.get_diplomados_filtrados('Archivado')
+        
+        if diplomados_archivados:
+            st.subheader("Diplomados Archivados")
+            
+            for dip in diplomados_archivados:
+                with st.expander(f"📦 {dip[1]} - {dip[2]}"):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.write(f"**Clave:** {dip[2]}")
+                        st.write(f"**Modalidad:** {dip[3]}")
+                        st.write(f"**Inicio:** {dip[4]} | **Fin:** {dip[5]}")
+                        st.write(f"**Mensualidades:** {dip[6]}")
+                        st.write(f"**Alumnos inscritos:** {dip[7]}")
+                    
+                    with col2:
+                        if st.button("🔄 Reactivar", key=f"react_dip_{dip[0]}"):
+                            if db.reactivar_diplomado(dip[0]):
+                                st.success("Diplomado reactivado")
+                                st.rerun()
+                            else:
+                                st.error("Error al reactivar")
+        else:
+            st.info("No hay diplomados archivados")
+    
+    with tab3:
         st.subheader("Registrar Nuevo Diplomado")
         
         with st.form("nuevo_diplomado"):
@@ -290,7 +311,7 @@ elif menu == "👥 Alumnos":
                     with col1:
                         st.write(f"**Matrícula:** {alumno[1]}")
                         st.write(f"**Nombre:** {alumno[2]}")
-                        st.write(f"**CURP:** {alumno[11]}")
+                        st.write(f"**CURP:** {alumno[13]}")
                         st.write(f"**Teléfono:** {alumno[6]}")
                         st.write(f"**Correo:** {alumno[7]}")
                     
@@ -300,6 +321,13 @@ elif menu == "👥 Alumnos":
                         st.write(f"**Inscripción:** {alumno[8]}")
                         st.write(f"**Pago Inscripción:** ${alumno[9]:,.2f}")
                         st.write(f"**Mensualidad:** ${alumno[10]:,.2f}")
+                        
+                        # Mostrar información de baja si aplica
+                        if alumno[3] == "Baja" and len(alumno) > 14:
+                            if alumno[14]:  # fecha_baja
+                                st.write(f"**Fecha de Baja:** {alumno[14]}")
+                            if len(alumno) > 15 and alumno[15]:  # motivo_baja
+                                st.write(f"**Motivo:** {alumno[15]}")
                     
                     with col3:
                         if st.button("✏️ Editar", key=f"edit_al_{alumno[0]}"):
@@ -327,7 +355,7 @@ elif menu == "👥 Alumnos":
                             with col1:
                                 matricula = st.text_input("Matrícula", value=alumno[1])
                                 nombre = st.text_input("Nombre Completo", value=alumno[2])
-                                curp = st.text_input("CURP", value=alumno[11], max_chars=18)
+                                curp = st.text_input("CURP", value=alumno[13], max_chars=18)
                                 telefono = st.text_input("Teléfono", value=alumno[6], max_chars=10)
                                 correo = st.text_input("Correo", value=alumno[7])
                             
@@ -335,6 +363,17 @@ elif menu == "👥 Alumnos":
                                 status = st.selectbox("Status", 
                                     ["Activo", "Baja", "Baja temporal", "Prospecto"],
                                     index=["Activo", "Baja", "Baja temporal", "Prospecto"].index(alumno[3]))
+                                
+                                # Si el status es Baja, mostrar campos adicionales
+                                fecha_baja = None
+                                motivo_baja = None
+                                if status == "Baja":
+                                    st.markdown("**Información de Baja:**")
+                                    fecha_baja_val = alumno[14] if len(alumno) > 14 and alumno[14] else datetime.now().strftime('%Y-%m-%d')
+                                    fecha_baja = st.date_input("Fecha de Baja", 
+                                        value=datetime.strptime(fecha_baja_val, '%Y-%m-%d') if fecha_baja_val else datetime.now())
+                                    motivo_baja = st.text_area("Motivo de Baja", 
+                                        value=alumno[15] if len(alumno) > 15 and alumno[15] else "")
                                 
                                 dips = db.get_all_diplomados()
                                 dip_options = [f"{d[2]}" for d in dips]
@@ -358,11 +397,17 @@ elif menu == "👥 Alumnos":
                                         st.error("Correo debe contener @")
                                     elif len(matricula) != 10:
                                         st.error("Matrícula debe tener 10 dígitos")
+                                    elif status == "Baja" and not motivo_baja:
+                                        st.error("Debes especificar el motivo de baja")
                                     else:
+                                        fecha_baja_str = fecha_baja.strftime('%Y-%m-%d') if fecha_baja and status == "Baja" else None
+                                        motivo_baja_str = motivo_baja if status == "Baja" else None
+                                        
                                         db.update_alumno(alumno[0], matricula, nombre, status, 
                                                        diplomado, telefono, correo,
                                                        fecha_insc.strftime('%Y-%m-%d'),
-                                                       pago_insc, mensualidad, curp)
+                                                       pago_insc, mensualidad, curp,
+                                                       fecha_baja_str, motivo_baja_str)
                                         del st.session_state.editing_alumno
                                         st.success("Alumno actualizado")
                                         st.rerun()
@@ -621,7 +666,7 @@ elif menu == "💸 Gastos":
 # ============================================================================
 # 📊 REPORTES
 # ============================================================================
-elif menu == "📊 Reportes":
+if menu == "📊 Reportes":
     st.markdown('<p class="main-header">Reportes y Análisis</p>', unsafe_allow_html=True)
     
     tipo_reporte = st.selectbox("Selecciona el tipo de reporte",
@@ -686,7 +731,7 @@ elif menu == "📊 Reportes":
                     st.dataframe(df, use_container_width=True)
                     
                     total_pagado = sum([p[1] for p in pagos])
-                    total_esperado = alumno_info[9] + (alumno_info[10] * alumno_info[4])
+                    total_esperado = alumno_info[9] + (alumno_info[10] * alumno_info[11])
                     adeudo = total_esperado - total_pagado
                     
                     col1, col2, col3 = st.columns(3)
@@ -761,7 +806,7 @@ elif menu == "📊 Reportes":
                 with col1:
                     st.write(f"**Nombre:** {alumno[2]}")
                     st.write(f"**Matrícula:** {alumno[1]}")
-                    st.write(f"**CURP:** {alumno[11]}")
+                    st.write(f"**CURP:** {alumno[13]}")
                 with col2:
                     st.write(f"**Diplomado:** {alumno[5]}")
                     st.write(f"**Status:** {alumno[3]}")
@@ -771,7 +816,7 @@ elif menu == "📊 Reportes":
                 st.markdown("### Detalle de Pagos")
                 
                 # Información de pagos esperados
-                num_mensualidades = alumno[4]
+                num_mensualidades = alumno[11]
                 monto_mensualidad = alumno[10]
                 pago_inscripcion = alumno[9]
                 

@@ -26,9 +26,16 @@ class DatabaseManager:
                 fecha_inicio TEXT NOT NULL,
                 fecha_fin TEXT NOT NULL,
                 num_mensualidades INTEGER NOT NULL,
-                alumnos_inscritos INTEGER DEFAULT 0
+                alumnos_inscritos INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'Activo'
             )
         ''')
+        
+        # Agregar columna status si no existe (para bases de datos existentes)
+        try:
+            cursor.execute("ALTER TABLE diplomados ADD COLUMN status TEXT DEFAULT 'Activo'")
+        except:
+            pass  # La columna ya existe
         
         # Tabla de Alumnos
         cursor.execute('''
@@ -47,9 +54,21 @@ class DatabaseManager:
                 num_mensualidades INTEGER NOT NULL,
                 total_diplomado REAL NOT NULL,
                 curp TEXT NOT NULL,
+                fecha_baja TEXT,
+                motivo_baja TEXT,
                 FOREIGN KEY (diplomado_id) REFERENCES diplomados(id)
             )
         ''')
+        
+        # Agregar columnas si no existen (para bases de datos existentes)
+        try:
+            cursor.execute("ALTER TABLE alumnos ADD COLUMN fecha_baja TEXT")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE alumnos ADD COLUMN motivo_baja TEXT")
+        except:
+            pass
         
         # Tabla de Pagos
         cursor.execute('''
@@ -71,6 +90,18 @@ class DatabaseManager:
                 fecha TEXT NOT NULL,
                 concepto TEXT NOT NULL,
                 monto REAL NOT NULL
+            )
+        ''')
+        
+        # Tabla de Calendario
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS calendario (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fecha TEXT NOT NULL,
+                diplomado_clave TEXT NOT NULL,
+                tipo TEXT NOT NULL,
+                modulo INTEGER NOT NULL,
+                FOREIGN KEY (diplomado_clave) REFERENCES diplomados(clave)
             )
         ''')
         
@@ -146,6 +177,46 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error al eliminar diplomado: {e}")
             return False
+    
+    def archivar_diplomado(self, id: int) -> bool:
+        """Archivar un diplomado (cambiar status a Archivado)"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE diplomados SET status='Archivado' WHERE id=?", (id,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error al archivar diplomado: {e}")
+            return False
+    
+    def reactivar_diplomado(self, id: int) -> bool:
+        """Reactivar un diplomado archivado (cambiar status a Activo)"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE diplomados SET status='Activo' WHERE id=?", (id,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error al reactivar diplomado: {e}")
+            return False
+    
+    def get_diplomados_filtrados(self, status: str = None) -> List[Tuple]:
+        """Obtener diplomados filtrados por status"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        if status:
+            cursor.execute('SELECT * FROM diplomados WHERE status=? ORDER BY fecha_inicio DESC', (status,))
+        else:
+            cursor.execute('SELECT * FROM diplomados ORDER BY fecha_inicio DESC')
+        
+        diplomados = cursor.fetchall()
+        conn.close()
+        return diplomados
     
     def update_alumnos_inscritos(self, diplomado_id: int):
         """Actualizar el contador de alumnos inscritos en un diplomado"""
@@ -238,7 +309,8 @@ class DatabaseManager:
     def update_alumno(self, id: int, matricula: str, nombre: str, status: str,
                      diplomado_clave: str, telefono: str, correo: str,
                      fecha_inscripcion: str, pago_inscripcion: float,
-                     mensualidad: float, curp: str) -> bool:
+                     mensualidad: float, curp: str, fecha_baja: str = None, 
+                     motivo_baja: str = None) -> bool:
         """Actualizar un alumno"""
         try:
             conn = self.get_connection()
@@ -255,15 +327,33 @@ class DatabaseManager:
             cursor.execute('''
                 UPDATE alumnos 
                 SET matricula=?, nombre_completo=?, status=?, diplomado_id=?, diplomado_clave=?,
-                    telefono=?, correo=?, fecha_inscripcion=?, pago_inscripcion=?, mensualidad=?, curp=?
+                    telefono=?, correo=?, fecha_inscripcion=?, pago_inscripcion=?, mensualidad=?, curp=?,
+                    fecha_baja=?, motivo_baja=?
                 WHERE id=?
             ''', (matricula, nombre, status, diplomado_id[0], diplomado_clave, telefono, correo,
-                 fecha_inscripcion, pago_inscripcion, mensualidad, curp, id))
+                 fecha_inscripcion, pago_inscripcion, mensualidad, curp, fecha_baja, motivo_baja, id))
             conn.commit()
             conn.close()
             return True
         except Exception as e:
             print(f"Error al actualizar alumno: {e}")
+            return False
+    
+    def registrar_baja_alumno(self, id: int, fecha_baja: str, motivo_baja: str) -> bool:
+        """Registrar la baja de un alumno con fecha y motivo"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE alumnos 
+                SET status='Baja', fecha_baja=?, motivo_baja=?
+                WHERE id=?
+            ''', (fecha_baja, motivo_baja, id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error al registrar baja: {e}")
             return False
     
     def delete_alumno(self, id: int) -> bool:
@@ -598,3 +688,91 @@ class DatabaseManager:
         alumnos = cursor.fetchall()
         conn.close()
         return alumnos
+    
+    # ========================================================================
+    # FUNCIONES PARA CALENDARIO
+    # ========================================================================
+    
+    def add_evento_calendario(self, fecha: str, diplomado_clave: str, tipo: str, modulo: int) -> bool:
+        """Agregar un nuevo evento al calendario"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO calendario (fecha, diplomado_clave, tipo, modulo)
+                VALUES (?, ?, ?, ?)
+            ''', (fecha, diplomado_clave, tipo, modulo))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error al agregar evento: {e}")
+            return False
+    
+    def get_eventos_calendario(self, fecha_inicio: str = None, fecha_fin: str = None, 
+                               diplomado_clave: str = None) -> List[Tuple]:
+        """Obtener eventos del calendario con filtros opcionales"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        query = 'SELECT * FROM calendario WHERE 1=1'
+        params = []
+        
+        if fecha_inicio and fecha_fin:
+            query += ' AND fecha BETWEEN ? AND ?'
+            params.extend([fecha_inicio, fecha_fin])
+        
+        if diplomado_clave:
+            query += ' AND diplomado_clave=?'
+            params.append(diplomado_clave)
+        
+        query += ' ORDER BY fecha'
+        
+        cursor.execute(query, params)
+        eventos = cursor.fetchall()
+        conn.close()
+        return eventos
+    
+    def get_eventos_mes(self, año: int, mes: int) -> List[Tuple]:
+        """Obtener eventos de un mes específico"""
+        from datetime import datetime
+        primer_dia = datetime(año, mes, 1).strftime('%Y-%m-%d')
+        if mes == 12:
+            ultimo_dia = datetime(año, mes, 31).strftime('%Y-%m-%d')
+        else:
+            from datetime import timedelta
+            ultimo_dia = (datetime(año, mes + 1, 1) - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        return self.get_eventos_calendario(primer_dia, ultimo_dia)
+    
+    def update_evento_calendario(self, id: int, fecha: str, diplomado_clave: str, 
+                                 tipo: str, modulo: int) -> bool:
+        """Actualizar un evento del calendario"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE calendario 
+                SET fecha=?, diplomado_clave=?, tipo=?, modulo=?
+                WHERE id=?
+            ''', (fecha, diplomado_clave, tipo, modulo, id))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error al actualizar evento: {e}")
+            return False
+    
+    def delete_evento_calendario(self, id: int) -> bool:
+        """Eliminar un evento del calendario"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM calendario WHERE id=?', (id,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error al eliminar evento: {e}")
+            return False
+
