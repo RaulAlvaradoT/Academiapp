@@ -180,12 +180,13 @@ class DatabaseManager:
         return diplomados
     
     def update_diplomado(self, id: int, nombre: str, clave: str, modalidad: str,
+                        ph = self.get_placeholder()
                         fecha_inicio: str, fecha_fin: str, num_mensualidades: int) -> bool:
         """Actualizar un diplomado"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(f'''
                 UPDATE diplomados 
                 SET nombre=?, clave=?, modalidad=?, fecha_inicio=?, fecha_fin=?, num_mensualidades=?
                 WHERE id = {ph}
@@ -224,6 +225,7 @@ class DatabaseManager:
     
     def archivar_diplomado(self, id: int) -> bool:
         """Archivar un diplomado (cambiar status a Archivado)"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -252,6 +254,7 @@ class DatabaseManager:
     
     def get_diplomados_filtrados(self, status: str = None) -> List[Tuple]:
         """Obtener diplomados filtrados por status"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -269,7 +272,7 @@ class DatabaseManager:
         """Actualizar el contador de alumnos inscritos en un diplomado"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             UPDATE diplomados 
             SET alumnos_inscritos = (
                 SELECT COUNT(*) FROM alumnos WHERE diplomado_id = {ph}
@@ -289,6 +292,7 @@ class DatabaseManager:
                   pago_inscripcion: float, mensualidad: float, num_mensualidades: int,
                   total_diplomado: float, curp: str) -> bool:
         """Agregar un nuevo alumno"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -302,7 +306,7 @@ class DatabaseManager:
                 conn.close()
                 return False
             
-            cursor.execute('''
+            cursor.execute(f'''
                 INSERT INTO alumnos (matricula, nombre_completo, status, diplomado_id, diplomado_clave,
                                    telefono, correo, fecha_inscripcion, pago_inscripcion, mensualidad,
                                    num_mensualidades, total_diplomado, curp)
@@ -318,6 +322,7 @@ class DatabaseManager:
             return False
     
     def get_alumnos_filtrados(self, nombre: str = None, matricula: str = None, 
+                             ph = self.get_placeholder()
                              diplomado: str = None) -> List[Tuple]:
         """Obtener alumnos con filtros opcionales"""
         conn = self.get_connection()
@@ -364,6 +369,7 @@ class DatabaseManager:
                      mensualidad: float, curp: str, fecha_baja: str = None, 
                      motivo_baja: str = None) -> bool:
         """Actualizar un alumno"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -377,7 +383,7 @@ class DatabaseManager:
                 conn.close()
                 return False
             
-            cursor.execute('''
+            cursor.execute(f'''
                 UPDATE alumnos 
                 SET matricula=?, nombre_completo=?, status=?, diplomado_id=?, diplomado_clave=?,
                     telefono=?, correo=?, fecha_inscripcion=?, pago_inscripcion=?, mensualidad=?, curp=?,
@@ -398,7 +404,7 @@ class DatabaseManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(f'''
                 UPDATE alumnos 
                 SET status='Baja', fecha_baja=?, motivo_baja=?
                 WHERE id = {ph}
@@ -413,6 +419,7 @@ class DatabaseManager:
     
     def delete_alumno(self, id: int) -> bool:
         """Eliminar un alumno"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -434,7 +441,7 @@ class DatabaseManager:
         """Obtener todos los alumnos de un diplomado específico"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT id, matricula, nombre_completo, mensualidad 
             FROM alumnos 
             WHERE diplomado_clave = {ph} AND status='Activo'
@@ -452,10 +459,11 @@ class DatabaseManager:
     def add_pago(self, alumno_id: int, num_mensualidad: int, monto: float,
                 fecha_pago: str, metodo_pago: str) -> bool:
         """Registrar un nuevo pago"""
+        ph = self.get_placeholder()
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(f'''
                 INSERT INTO pagos (alumno_id, num_mensualidad, monto, fecha_pago, metodo_pago)
                 VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
             ''', (alumno_id, num_mensualidad, monto, fecha_pago, metodo_pago))
@@ -471,7 +479,7 @@ class DatabaseManager:
         """Verificar si un alumno ya pagó una mensualidad específica"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT COUNT(*) FROM pagos 
             WHERE alumno_id = {ph} AND num_mensualidad = {ph}
         ''', (alumno_id, num_mensualidad))
@@ -482,9 +490,10 @@ class DatabaseManager:
     
     def get_detalle_pago(self, alumno_id: int, num_mensualidad: int) -> Optional[Tuple]:
         """Obtener detalles de un pago específico"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT monto, fecha_pago, metodo_pago 
             FROM pagos 
             WHERE alumno_id = {ph} AND num_mensualidad = {ph}
@@ -498,7 +507,7 @@ class DatabaseManager:
         """Obtener todos los pagos de un alumno"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT num_mensualidad, monto, fecha_pago, metodo_pago 
             FROM pagos 
             WHERE alumno_id = {ph}
@@ -512,6 +521,7 @@ class DatabaseManager:
     def get_pagos_filtrados(self, fecha_inicio: str, fecha_fin: str, 
                            diplomado_clave: str = None) -> List[Tuple]:
         """Obtener pagos con filtros de fecha y diplomado"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -563,7 +573,7 @@ class DatabaseManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(f'''
                 INSERT INTO gastos (fecha, concepto, monto)
                 VALUES ({ph}, {ph}, {ph})
             ''', (fecha, concepto, monto))
@@ -577,9 +587,10 @@ class DatabaseManager:
     
     def get_gastos_filtrados(self, fecha_inicio: str, fecha_fin: str) -> List[Tuple]:
         """Obtener gastos filtrados por fecha"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT * FROM gastos 
             WHERE fecha BETWEEN {ph} AND {ph}
             ORDER BY fecha DESC
@@ -609,6 +620,7 @@ class DatabaseManager:
     
     def get_total_alumnos(self) -> int:
         """Obtener total de alumnos"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT COUNT(*) FROM alumnos')
@@ -641,12 +653,13 @@ class DatabaseManager:
         """Obtener ingresos del mes actual"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        ph = self.get_placeholder()
         
         fecha_actual = datetime.now()
         primer_dia = fecha_actual.replace(day=1).strftime('%Y-%m-%d')
         ultimo_dia = fecha_actual.strftime('%Y-%m-%d')
         
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT COALESCE(SUM(monto), 0) FROM pagos 
             WHERE fecha_pago BETWEEN {ph} AND {ph}
         ''', (primer_dia, ultimo_dia))
@@ -664,7 +677,7 @@ class DatabaseManager:
         primer_dia = fecha_actual.replace(day=1).strftime('%Y-%m-%d')
         ultimo_dia = fecha_actual.strftime('%Y-%m-%d')
         
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT COALESCE(SUM(monto), 0) FROM gastos 
             WHERE fecha BETWEEN {ph} AND {ph}
         ''', (primer_dia, ultimo_dia))
@@ -675,6 +688,7 @@ class DatabaseManager:
     
     def get_alumnos_por_diplomado(self) -> List[Tuple]:
         """Obtener conteo de alumnos por diplomado"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -716,14 +730,14 @@ class DatabaseManager:
                 ultimo_dia = (datetime(año, mes + 1, 1) - timedelta(days=1)).strftime('%Y-%m-%d')
             
             # Obtener ingresos
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(monto), 0) FROM pagos 
                 WHERE fecha_pago BETWEEN {ph} AND {ph}
             ''', (primer_dia, ultimo_dia))
             ingresos = cursor.fetchone()[0]
             
             # Obtener gastos
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(monto), 0) FROM gastos 
                 WHERE fecha BETWEEN {ph} AND {ph}
             ''', (primer_dia, ultimo_dia))
@@ -742,6 +756,7 @@ class DatabaseManager:
     
     def get_alumnos_con_adeudos(self) -> List[Tuple]:
         """Obtener alumnos que tienen adeudos"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -772,7 +787,7 @@ class DatabaseManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(f'''
                 INSERT INTO calendario (fecha, diplomado_clave, tipo, modulo)
                 VALUES ({ph}, {ph}, {ph}, {ph})
             ''', (fecha, diplomado_clave, tipo, modulo))
@@ -787,6 +802,7 @@ class DatabaseManager:
     def get_eventos_calendario(self, fecha_inicio: str = None, fecha_fin: str = None, 
                                diplomado_clave: str = None) -> List[Tuple]:
         """Obtener eventos del calendario con filtros opcionales"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         
@@ -822,12 +838,13 @@ class DatabaseManager:
         return self.get_eventos_calendario(primer_dia, ultimo_dia)
     
     def update_evento_calendario(self, id: int, fecha: str, diplomado_clave: str, 
+                                 ph = self.get_placeholder()
                                  tipo: str, modulo: int) -> bool:
         """Actualizar un evento del calendario"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute('''
+            cursor.execute(f'''
                 UPDATE calendario 
                 SET fecha=?, diplomado_clave=?, tipo=?, modulo=?
                 WHERE id = {ph}
