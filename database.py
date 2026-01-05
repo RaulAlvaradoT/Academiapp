@@ -9,9 +9,16 @@ class DatabaseManager:
         self.init_database()
     
     def get_connection(self):
-        """Crear conexión raw a MySQL"""
-        # Usar el engine de SQLAlchemy para obtener conexión raw
-        return self.conn_sql.session.connection().connection.driver_connection
+        """Obtener conexión raw de SQLAlchemy"""
+        # Usar raw_connection() del engine de SQLAlchemy
+        return self.conn_sql.session.connection().connection
+    
+    def execute_query(self, query: str, params: tuple = None):
+        """Ejecutar query usando SQLAlchemy text"""
+        from sqlalchemy import text
+        with self.conn_sql.session.begin():
+            result = self.conn_sql.session.execute(text(query), params or {})
+            return result
     
     def get_placeholder(self):
         """Retorna el placeholder para MySQL"""
@@ -19,20 +26,19 @@ class DatabaseManager:
     
     def init_database(self):
         """Inicializar todas las tablas de la base de datos MySQL"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        from sqlalchemy import text
         
         # Tipos de datos MySQL
         pk = "INT AUTO_INCREMENT PRIMARY KEY"
         integer = "INT"
         real = "DECIMAL(10,2)"
-        text = "TEXT"
+        text_type = "TEXT"
         varchar_50 = "VARCHAR(50)"
         varchar_255 = "VARCHAR(255)"
         date_type = "DATE"
         
         # Tabla de Diplomados
-        cursor.execute(f'''
+        self.conn_sql.session.execute(text(f'''
             CREATE TABLE IF NOT EXISTS diplomados (
                 id {pk},
                 nombre {varchar_255} NOT NULL,
@@ -44,17 +50,17 @@ class DatabaseManager:
                 alumnos_inscritos {integer} DEFAULT 0,
                 status {varchar_50} DEFAULT 'Activo'
             )
-        ''')
+        '''))
         
-        # Agregar columna status si no existe (para bases de datos existentes)
+        # Agregar columna status si no existe
         try:
-            cursor.execute("ALTER TABLE diplomados ADD COLUMN status VARCHAR(20) DEFAULT 'Activo'")
-            conn.commit()
+            self.conn_sql.session.execute(text(f"ALTER TABLE diplomados ADD COLUMN status VARCHAR(20) DEFAULT 'Activo'"))
+            self.conn_sql.session.commit()
         except:
-            pass  # La columna ya existe
+            pass
         
         # Tabla de Alumnos
-        cursor.execute(f'''
+        self.conn_sql.session.execute(text(f'''
             CREATE TABLE IF NOT EXISTS alumnos (
                 id {pk},
                 matricula {varchar_50} NOT NULL,
@@ -70,25 +76,25 @@ class DatabaseManager:
                 num_mensualidades {integer} NOT NULL,
                 total_diplomado {real} NOT NULL,
                 fecha_baja {date_type},
-                motivo_baja {text},
+                motivo_baja {text_type},
                 FOREIGN KEY (diplomado_id) REFERENCES diplomados(id)
             )
-        ''')
+        '''))
         
-        # Agregar columnas si no existen (para bases de datos existentes)
+        # Agregar columnas si no existen
         try:
-            cursor.execute(f"ALTER TABLE alumnos ADD COLUMN fecha_baja {date_type}")
-            conn.commit()
+            self.conn_sql.session.execute(text(f"ALTER TABLE alumnos ADD COLUMN fecha_baja {date_type}"))
+            self.conn_sql.session.commit()
         except:
             pass
         try:
-            cursor.execute(f"ALTER TABLE alumnos ADD COLUMN motivo_baja {text}")
-            conn.commit()
+            self.conn_sql.session.execute(text(f"ALTER TABLE alumnos ADD COLUMN motivo_baja {text_type}"))
+            self.conn_sql.session.commit()
         except:
             pass
         
         # Tabla de Pagos
-        cursor.execute(f'''
+        self.conn_sql.session.execute(text(f'''
             CREATE TABLE IF NOT EXISTS pagos (
                 id {pk},
                 alumno_id {integer} NOT NULL,
@@ -98,20 +104,20 @@ class DatabaseManager:
                 metodo_pago {varchar_50} NOT NULL,
                 FOREIGN KEY (alumno_id) REFERENCES alumnos(id)
             )
-        ''')
+        '''))
         
         # Tabla de Gastos
-        cursor.execute(f'''
+        self.conn_sql.session.execute(text(f'''
             CREATE TABLE IF NOT EXISTS gastos (
                 id {pk},
                 fecha {date_type} NOT NULL,
                 concepto {varchar_255} NOT NULL,
                 monto {real} NOT NULL
             )
-        ''')
+        '''))
         
         # Tabla de Calendario
-        cursor.execute(f'''
+        self.conn_sql.session.execute(text(f'''
             CREATE TABLE IF NOT EXISTS calendario (
                 id {pk},
                 fecha {date_type} NOT NULL,
@@ -120,11 +126,9 @@ class DatabaseManager:
                 modulo {integer} NOT NULL,
                 FOREIGN KEY (diplomado_clave) REFERENCES diplomados(clave)
             )
-        ''')
+        '''))
         
-        conn.commit()
-        cursor.close()
-        conn.close()
+        self.conn_sql.session.commit()
     
     # ========================================================================
     # FUNCIONES PARA DIPLOMADOS
