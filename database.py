@@ -6,19 +6,49 @@ from typing import List, Tuple, Optional
 class DatabaseManager:
     def __init__(self):
         # Obtener configuración desde secrets
-        secrets = st.secrets["connections"]["mysql"]
-        self.config = {
-            'host': secrets['host'],
-            'port': secrets['port'],
-            'user': secrets['username'],
-            'password': secrets['password'],
-            'database': secrets['database']
-        }
+        try:
+            secrets = st.secrets["connections"]["mysql"]
+            self.config = {
+                'host': secrets['host'],
+                'port': int(secrets['port']),
+                'user': secrets['username'],
+                'password': secrets['password'],
+                'database': secrets['database'],
+                'charset': 'utf8mb4'
+            }
+        except Exception as e:
+            st.error(f"❌ Error al leer secrets de MySQL: {e}")
+            st.info("""
+            Por favor configura los secrets en Streamlit Cloud:
+            1. Ve a 'Settings' → 'Secrets'
+            2. Agrega:
+            ```
+            [connections.mysql]
+            host = "srv1266.hstgr.io"
+            port = 3306
+            database = "u530819723_Academiapp"
+            username = "u530819723_raulacademiapp"
+            password = "tu_password"
+            ```
+            """)
+            raise
         self.init_database()
     
     def get_connection(self):
         """Crear conexión PyMySQL directa"""
-        return pymysql.connect(**self.config)
+        try:
+            return pymysql.connect(**self.config)
+        except pymysql.err.OperationalError as e:
+            st.error(f"❌ Error de conexión a MySQL: {e}")
+            st.info(f"""
+            Verifica:
+            - Host: {self.config['host']}
+            - Puerto: {self.config['port']}
+            - Base de datos: {self.config['database']}
+            - Usuario: {self.config['user']}
+            - Que el servidor permita conexiones desde IPs de Streamlit Cloud
+            """)
+            raise
     
     def get_placeholder(self):
         """Retorna el placeholder para MySQL"""
