@@ -467,7 +467,9 @@ class DatabaseManager:
             return False
     
     def verificar_pago_mensualidad(self, alumno_id: int, num_mensualidad: int) -> bool:
+    def verificar_pago_mensualidad(self, alumno_id: int, num_mensualidad: int) -> bool:
         """Verificar si un alumno ya pagó una mensualidad específica"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(f'''
