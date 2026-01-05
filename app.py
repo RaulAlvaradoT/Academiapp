@@ -573,7 +573,7 @@ elif menu == "💰 Pagos":
                                 
                                 with col3:
                                     metodo = st.selectbox("Método de pago",
-                                                         ["Transferencia", "Efectivo", "Depósito", "Enlace"],
+                                                         ["Transferencia", "Efectivo", "Depósito", "Enlace", "Beca"],
                                                          key=f"metodo_{alumno_id}")
                                 
                                 if st.form_submit_button("💾 Registrar Pago"):
