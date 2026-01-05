@@ -518,17 +518,17 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        query = '''
+        query = f'''
             SELECT a.matricula, a.nombre_completo, a.diplomado_clave, p.num_mensualidad,
                    p.monto, p.fecha_pago, p.metodo_pago
             FROM pagos p
             JOIN alumnos a ON p.alumno_id = a.id
-            WHERE p.fecha_pago BETWEEN ? AND ?
+            WHERE p.fecha_pago BETWEEN {ph} AND {ph}
         '''
         params = [fecha_inicio, fecha_fin]
         
         if diplomado_clave:
-            query += ' AND a.diplomado_clave=?'
+            query += f' AND a.diplomado_clave={ph}'
             params.append(diplomado_clave)
         
         query += ' ORDER BY p.fecha_pago DESC'

@@ -1,11 +1,3 @@
-# Configuración de la base de datos MySQL
-
-# IMPORTANTE: Crea una base de datos MySQL gratuita con acceso remoto en:
-# - FreeSQLDatabase.com (gratis, sin tarjeta)
-# - Railway.app (gratis con GitHub)
-# - Aiven.io (gratis 1GB)
-# 
-# Tu hosting actual (srv1266.hstgr.io) bloquea puerto 3306 para conexiones externas
 
 import os
 
