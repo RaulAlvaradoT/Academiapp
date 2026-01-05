@@ -199,8 +199,17 @@ elif menu == "📚 Diplomados":
                             modalidad = st.selectbox("Modalidad", 
                                                     ["Presencial", "Virtual", "Híbrida"],
                                                     index=["Presencial", "Virtual", "Híbrida"].index(dip[3]))
-                            fecha_inicio = st.date_input("Fecha Inicio", value=datetime.strptime(dip[4], '%Y-%m-%d'))
-                            fecha_fin = st.date_input("Fecha Fin", value=datetime.strptime(dip[5], '%Y-%m-%d'))
+                            
+                            # Convertir fechas a date si son strings
+                            fecha_inicio_val = dip[4]
+                            if isinstance(fecha_inicio_val, str):
+                                fecha_inicio_val = datetime.strptime(fecha_inicio_val, '%Y-%m-%d').date()
+                            fecha_fin_val = dip[5]
+                            if isinstance(fecha_fin_val, str):
+                                fecha_fin_val = datetime.strptime(fecha_fin_val, '%Y-%m-%d').date()
+                            
+                            fecha_inicio = st.date_input("Fecha Inicio", value=fecha_inicio_val)
+                            fecha_fin = st.date_input("Fecha Fin", value=fecha_fin_val)
                             mensualidades = st.number_input("Mensualidades", value=dip[6], min_value=1)
                             
                             col1, col2 = st.columns(2)
@@ -384,8 +393,12 @@ elif menu == "👥 Alumnos":
                                 diplomado = st.selectbox("Diplomado Activo", dip_options,
                                     index=dip_options.index(alumno[5]) if alumno[5] in dip_options else 0)
                                 
-                                fecha_insc = st.date_input("Fecha Inscripción", 
-                                    value=datetime.strptime(alumno[8], '%Y-%m-%d'))
+                                # Convertir fecha a objeto date si es string
+                                fecha_insc_val = alumno[8]
+                                if isinstance(fecha_insc_val, str):
+                                    fecha_insc_val = datetime.strptime(fecha_insc_val, '%Y-%m-%d').date()
+                                
+                                fecha_insc = st.date_input("Fecha Inscripción", value=fecha_insc_val)
                                 pago_insc = st.number_input("Pago Inscripción", value=float(alumno[9]), min_value=0.0)
                                 mensualidad = st.number_input("Mensualidad", value=float(alumno[10]), min_value=0.0)
                             
@@ -431,9 +444,13 @@ elif menu == "👥 Alumnos":
             col1, col2 = st.columns(2)
             
             with col1:
-                nombre_completo = st.text_input("Nombre *")
+                nombre_completo = st.text_input("Nombre Completo *")
+                matricula = st.text_input("Matrícula (10 dígitos)", max_chars=10)
+                telefono = st.text_input("Teléfono (10 dígitos) *", max_chars=10)
+                correo = st.text_input("Correo Electrónico *")
                 status = st.selectbox("Status *", ["Activo", "Baja", "Baja temporal", "Prospecto"])
-                
+            
+            with col2:
                 diplomados = db.get_all_diplomados()
                 if diplomados:
                     opciones = ["-"] + [f"{d[2]}" for d in diplomados]
@@ -442,14 +459,9 @@ elif menu == "👥 Alumnos":
                     st.warning("⚠️ Primero debes registrar diplomados")
                     diplomado_activo = None
                 
-                matricula = st.text_input("Matrícula (10 dígitos)", max_chars=10)
-                telefono = st.text_input("Teléfono (10 dígitos) *", max_chars=10)
-            
-            with col2:
-                correo = st.text_input("Correo Electrónico *")
                 fecha_inscripcion = st.date_input("Fecha de Inscripción *")
-                pago_inscripcion = st.number_input("Inscripción *", min_value=0.0, step=100.0)
-                mensualidad = st.number_input("Mensualidad *", min_value=0.0, step=100.0)
+                pago_inscripcion = st.number_input("💰 Pago Inscripción *", min_value=0.0, step=100.0, format="%.2f")
+                mensualidad = st.number_input("💵 Mensualidad *", min_value=0.0, step=100.0, format="%.2f")
                 
                 # Calcular y mostrar total diplomado
                 if diplomados and diplomado_activo and diplomado_activo != "-":
