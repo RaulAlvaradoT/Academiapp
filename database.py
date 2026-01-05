@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Tuple, Optional
 
 class DatabaseManager:
-    def __init__(self):
+    def __init__(self, skip_init=False):
         # Obtener configuración desde secrets
         try:
             secrets = st.secrets["connections"]["mysql"]
@@ -32,7 +32,9 @@ class DatabaseManager:
             ```
             """)
             raise
-        self.init_database()
+        # Solo inicializar tablas si se solicita explícitamente
+        if not skip_init:
+            self.init_database()
     
     def get_connection(self):
         """Crear conexión PyMySQL directa"""

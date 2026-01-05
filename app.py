@@ -47,8 +47,13 @@ if not st.session_state.authenticated:
 # APLICACIÓN PRINCIPAL
 # ============================================================================
 
-# Inicializar base de datos
-db = DatabaseManager()
+# Inicializar base de datos (cached para evitar múltiples conexiones)
+@st.cache_resource
+def get_database():
+    """Obtener instancia singleton de DatabaseManager"""
+    return DatabaseManager(skip_init=True)
+
+db = get_database()
 
 # CSS personalizado
 st.markdown("""
