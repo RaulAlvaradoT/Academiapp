@@ -541,14 +541,15 @@ class DatabaseManager:
     def get_reporte_pagos_diplomado(self, diplomado_clave: str, fecha_inicio: str, 
                                    fecha_fin: str) -> List[Tuple]:
         """Obtener reporte de pagos por diplomado"""
+        ph = self.get_placeholder()
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT a.matricula, a.nombre_completo, p.num_mensualidad, p.monto, 
                    p.fecha_pago, p.metodo_pago
             FROM pagos p
             JOIN alumnos a ON p.alumno_id = a.id
-            WHERE a.diplomado_clave=? AND p.fecha_pago BETWEEN ? AND ?
+            WHERE a.diplomado_clave={ph} AND p.fecha_pago BETWEEN {ph} AND {ph}
             ORDER BY a.nombre_completo, p.num_mensualidad
         ''', (diplomado_clave, fecha_inicio, fecha_fin))
         pagos = cursor.fetchall()
