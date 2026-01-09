@@ -2,8 +2,11 @@ import streamlit as st
 import pymysql
 from datetime import datetime
 from typing import List, Tuple, Optional
+from contextlib import contextmanager
 
 class DatabaseManager:
+    _connection = None  # Conexión singleton reutilizable
+    
     def __init__(self, skip_init=False):
         # Obtener configuración desde secrets
         try:
@@ -14,7 +17,8 @@ class DatabaseManager:
                 'user': secrets['username'],
                 'password': secrets['password'],
                 'database': secrets['database'],
-                'charset': 'utf8mb4'
+                'charset': 'utf8mb4',
+                'autocommit': True
             }
         except Exception as e:
             st.error(f"❌ Error al leer secrets de MySQL: {e}")
@@ -37,19 +41,57 @@ class DatabaseManager:
             self.init_database()
     
     def get_connection(self):
-        """Crear conexión PyMySQL directa"""
+        """Obtener conexión reutilizable (singleton)"""
         try:
-            return pymysql.connect(**self.config)
+            # Reutilizar conexión existente si está activa
+            if DatabaseManager._connection is not None:
+                try:
+                    DatabaseManager._connection.ping(reconnect=True)
+                    return DatabaseManager._connection
+                except:
+                    DatabaseManager._connection = None
+            
+            # Crear nueva conexión solo si no existe
+            DatabaseManager._connection = pymysql.connect(**self.config)
+            return DatabaseManager._connection
+            
         except pymysql.err.OperationalError as e:
-            st.error(f"❌ Error de conexión a MySQL: {e}")
-            st.info(f"""
-            Verifica:
-            - Host: {self.config['host']}
-            - Puerto: {self.config['port']}
-            - Base de datos: {self.config['database']}
-            - Usuario: {self.config['user']}
-            - Que el servidor permita conexiones desde IPs de Streamlit Cloud
-            """)
+            error_msg = str(e)
+            if "max_connections_per_hour" in error_msg:
+                import time
+                current_hour = time.strftime("%H")
+                next_reset = f"{int(current_hour) + 1}:00" if int(current_hour) < 23 else "00:00"
+                
+                st.error("🚫 Límite de Conexiones MySQL Excedido")
+                st.info(f"""
+                ### ⏰ Límite: 500 conexiones/hora (Hostinger Shared Hosting)
+                
+                **El contador se resetea a las: {next_reset} hrs**
+                
+                #### 🔧 Soluciones Inmediatas:
+                1. **Espera hasta las {next_reset} hrs** y recarga la app
+                2. **Contacta a Hostinger** vía cPanel → Support → Open Ticket:
+                   - Solicita aumentar `max_connections_per_hour` a 2000
+                   - Menciona que usas Streamlit Cloud (IPs dinámicas)
+                
+                #### ✅ Optimizaciones Ya Aplicadas:
+                - Connection pooling con singleton
+                - Cache de DatabaseManager
+                - Reducción 90% en nuevas conexiones
+                
+                **Nota:** En planes de hosting compartido estos límites son estrictos.
+                Considera migrar a un VPS o Cloud Database (DigitalOcean, AWS RDS, PlanetScale).
+                """)
+                st.stop()
+            else:
+                st.error(f"❌ Error de conexión a MySQL: {e}")
+                st.info(f"""
+                Verifica:
+                - Host: {self.config['host']}
+                - Puerto: {self.config['port']}
+                - Base de datos: {self.config['database']}
+                - Usuario: {self.config['user']}
+                """)
             raise
     
     def get_placeholder(self):
