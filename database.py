@@ -46,9 +46,15 @@ class DatabaseManager:
             # Reutilizar conexión existente si está activa
             if DatabaseManager._connection is not None:
                 try:
+                    # Verificar si la conexión está viva
                     DatabaseManager._connection.ping(reconnect=True)
                     return DatabaseManager._connection
-                except:
+                except (pymysql.err.OperationalError, pymysql.err.InterfaceError, OSError, AttributeError):
+                    # Conexión muerta, cerrarla y recrearla
+                    try:
+                        DatabaseManager._connection.close()
+                    except:
+                        pass
                     DatabaseManager._connection = None
             
             # Crear nueva conexión solo si no existe
