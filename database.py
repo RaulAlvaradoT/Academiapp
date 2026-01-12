@@ -205,7 +205,6 @@ class DatabaseManager:
         
         conn.commit()
         cursor.close()
-        conn.close()
     
     # ========================================================================
     # FUNCIONES PARA DIPLOMADOS
@@ -224,7 +223,6 @@ class DatabaseManager:
             ''', (nombre, clave, modalidad, fecha_inicio, fecha_fin, num_mensualidades))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al agregar diplomado: {e}")
@@ -237,7 +235,6 @@ class DatabaseManager:
         cursor.execute('SELECT * FROM diplomados ORDER BY fecha_inicio DESC')
         diplomados = cursor.fetchall()
         cursor.close()
-        conn.close()
         return diplomados
     
     def update_diplomado(self, id: int, nombre: str, clave: str, modalidad: str,
@@ -254,7 +251,6 @@ class DatabaseManager:
             ''', (nombre, clave, modalidad, fecha_inicio, fecha_fin, num_mensualidades, id))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al actualizar diplomado: {e}")
@@ -273,13 +269,11 @@ class DatabaseManager:
             
             if count > 0:
                 cursor.close()
-                conn.close()
                 return False
             
             cursor.execute(f'DELETE FROM diplomados WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al eliminar diplomado: {e}")
@@ -294,7 +288,6 @@ class DatabaseManager:
             cursor.execute(f"UPDATE diplomados SET status='Archivado' WHERE id = {ph}", (id,))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al archivar diplomado: {e}")
@@ -308,7 +301,6 @@ class DatabaseManager:
             cursor.execute("UPDATE diplomados SET status='Activo' WHERE id = {ph}", (id,))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al reactivar diplomado: {e}")
@@ -327,7 +319,6 @@ class DatabaseManager:
         
         diplomados = cursor.fetchall()
         cursor.close()
-        conn.close()
         return diplomados
     
     def update_alumnos_inscritos(self, diplomado_id: int):
@@ -344,7 +335,6 @@ class DatabaseManager:
         ''', (diplomado_id, diplomado_id))
         conn.commit()
         cursor.close()
-        conn.close()
     
     # ========================================================================
     # FUNCIONES PARA ALUMNOS
@@ -366,7 +356,6 @@ class DatabaseManager:
             
             if not diplomado_id:
                 cursor.close()
-                conn.close()
                 return False
             
             cursor.execute(f'''
@@ -378,7 +367,6 @@ class DatabaseManager:
                  fecha_inscripcion, pago_inscripcion, mensualidad, num_mensualidades, total_diplomado))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al agregar alumno: {e}")
@@ -413,7 +401,6 @@ class DatabaseManager:
         cursor.execute(query, params)
         alumnos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return alumnos
     
     def get_alumno_por_matricula(self, matricula: str) -> Optional[Tuple]:
@@ -424,7 +411,6 @@ class DatabaseManager:
         cursor.execute(f'SELECT * FROM alumnos WHERE matricula = {ph}', (matricula,))
         alumno = cursor.fetchone()
         cursor.close()
-        conn.close()
         return alumno
     
     def update_alumno(self, id: int, matricula: str, nombre: str, status: str,
@@ -444,7 +430,6 @@ class DatabaseManager:
             
             if not diplomado_id:
                 cursor.close()
-                conn.close()
                 return False
             
             cursor.execute(f'''
@@ -457,7 +442,6 @@ class DatabaseManager:
                  fecha_inscripcion, pago_inscripcion, mensualidad, fecha_baja, motivo_baja, id))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al actualizar alumno: {e}")
@@ -475,7 +459,6 @@ class DatabaseManager:
             ''', (fecha_baja, motivo_baja, id))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al registrar baja: {e}")
@@ -495,7 +478,6 @@ class DatabaseManager:
             cursor.execute(f'DELETE FROM alumnos WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al eliminar alumno: {e}")
@@ -514,7 +496,6 @@ class DatabaseManager:
         ''', (clave,))
         alumnos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return alumnos
     
     # ========================================================================
@@ -534,7 +515,6 @@ class DatabaseManager:
             ''', (alumno_id, num_mensualidad, monto, fecha_pago, metodo_pago))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al registrar pago: {e}")
@@ -551,7 +531,6 @@ class DatabaseManager:
         ''', (alumno_id, num_mensualidad))
         count = cursor.fetchone()[0]
         cursor.close()
-        conn.close()
         return count > 0
     
     def get_detalle_pago(self, alumno_id: int, num_mensualidad: int) -> Optional[Tuple]:
@@ -566,7 +545,6 @@ class DatabaseManager:
         ''', (alumno_id, num_mensualidad))
         pago = cursor.fetchone()
         cursor.close()
-        conn.close()
         return pago
     
     def get_pagos_alumno(self, alumno_id: int) -> List[Tuple]:
@@ -582,7 +560,6 @@ class DatabaseManager:
         ''', (alumno_id,))
         pagos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return pagos
     
     def get_pagos_filtrados(self, fecha_inicio: str, fecha_fin: str, 
@@ -610,7 +587,6 @@ class DatabaseManager:
         cursor.execute(query, params)
         pagos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return pagos
     
     def get_reporte_pagos_diplomado(self, diplomado_clave: str, fecha_inicio: str, 
@@ -629,7 +605,6 @@ class DatabaseManager:
         ''', (diplomado_clave, fecha_inicio, fecha_fin))
         pagos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return pagos
     
     # ========================================================================
@@ -647,7 +622,6 @@ class DatabaseManager:
             ''', (fecha, concepto, monto))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al registrar gasto: {e}")
@@ -665,7 +639,6 @@ class DatabaseManager:
         ''', (fecha_inicio, fecha_fin))
         gastos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return gastos
     
     def delete_gasto(self, id: int) -> bool:
@@ -677,7 +650,6 @@ class DatabaseManager:
             cursor.execute(f'DELETE FROM gastos WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al eliminar gasto: {e}")
@@ -695,7 +667,6 @@ class DatabaseManager:
         cursor.execute('SELECT COUNT(*) FROM alumnos')
         total = cursor.fetchone()[0]
         cursor.close()
-        conn.close()
         return total
     
     def get_alumnos_activos(self) -> int:
@@ -705,7 +676,6 @@ class DatabaseManager:
         cursor.execute("SELECT COUNT(*) FROM alumnos WHERE status='Activo'")
         total = cursor.fetchone()[0]
         cursor.close()
-        conn.close()
         return total
     
     def get_total_diplomados(self) -> int:
@@ -715,7 +685,6 @@ class DatabaseManager:
         cursor.execute('SELECT COUNT(*) FROM diplomados')
         total = cursor.fetchone()[0]
         cursor.close()
-        conn.close()
         return total
     
     def get_ingresos_mes_actual(self) -> float:
@@ -734,7 +703,6 @@ class DatabaseManager:
         ''', (primer_dia, ultimo_dia))
         total = cursor.fetchone()[0]
         cursor.close()
-        conn.close()
         return total
     
     def get_gastos_mes_actual(self) -> float:
@@ -753,7 +721,6 @@ class DatabaseManager:
         ''', (primer_dia, ultimo_dia))
         total = cursor.fetchone()[0]
         cursor.close()
-        conn.close()
         return total
     
     def get_alumnos_por_diplomado(self) -> List[Tuple]:
@@ -769,7 +736,6 @@ class DatabaseManager:
         ''')
         datos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return datos
     
     def get_ingresos_gastos_6_meses(self) -> List[Tuple]:
@@ -821,7 +787,6 @@ class DatabaseManager:
             meses.append((nombre_mes, ingresos, gastos))
         
         cursor.close()
-        conn.close()
         return meses
     
     def get_alumnos_con_adeudos(self) -> List[Tuple]:
@@ -845,7 +810,6 @@ class DatabaseManager:
         
         alumnos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return alumnos
     
     # ========================================================================
@@ -863,7 +827,6 @@ class DatabaseManager:
             ''', (fecha, diplomado_clave, tipo, modulo))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al agregar evento: {e}")
@@ -892,7 +855,6 @@ class DatabaseManager:
         cursor.execute(query, params)
         eventos = cursor.fetchall()
         cursor.close()
-        conn.close()
         return eventos
     
     def get_eventos_mes(self, año: int, mes: int) -> List[Tuple]:
@@ -921,7 +883,6 @@ class DatabaseManager:
             ''', (fecha, diplomado_clave, tipo, modulo, id))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al actualizar evento: {e}")
@@ -936,7 +897,6 @@ class DatabaseManager:
             cursor.execute(f'DELETE FROM calendario WHERE id = {ph}', (id,))
             conn.commit()
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"Error al eliminar evento: {e}")
